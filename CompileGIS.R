@@ -18,11 +18,15 @@ projection <- raster::projection
 
 #----Full BBox----
 df = expand.grid(data.frame(lat = c(-56.4, 37.9), long = c(-124.7,-32.9)))
+
+# sp extent
+spdf = df
+coordinates(spdf) = ~long+lat
+
+# sf extent
 ext = st_as_sf(df, coords = c("long", "lat")) %>%
   st_set_crs(4326)
 ext_grid = st_make_grid(ext, cellsize = 4.5, what="centers")
-plot(ext_grid, pch=20, col="red")
-maps::map(add=TRUE)
 
 #----File to save spatial data----
 gpkg_dir <- "data/GIS"
@@ -100,6 +104,22 @@ new_names <- format(as.Date(names(tifs)), "%Y") %>%
   sprintf("modis_mcd12q1_umd_%s.tif", .) %>% 
   file.path(dirname(tifs), .)
 file.rename(tifs, new_names)
+
+#----Canopy Height----
+
+CanopyHeight = raster("~/Desktop/GlobalVeg.tif") %>%
+  crop(., spdf) # downloaded from https://landscape.jpl.nasa.gov/
+
+#---Climate----
+# Pulling all worldclim data
+worldclim = getData("worldclim", var="bio", res = 2.5) # 2.5 minutes of a degree (about 4.5 km at eq)
+tmin = getData("worldclim", var="tmin", res = 2.5)
+tmax = getData("worldclim", var="tmax", res = 2.5)
+prec = getData("worldclim", var="prec", res = 2.5)
+
+# stacking and cropping worldclim
+climate = stack(worldclim, tmin, tmax, prec) %>%
+  crop(., spdf)
 
 #----output----
 unlink(f_ne)
