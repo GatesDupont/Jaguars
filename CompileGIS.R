@@ -13,8 +13,53 @@ library(tidyverse)
 library(elevatr)
 
 # resolve namespace conflicts
-select <- dplyr::select
-projection <- raster::projection
+select = dplyr::select
+projection = raster::projection
+
+# MANUAL DOWNLOADS
+
+"Please follow the links to manually download the data laid out below.
+ These cannot be downlaoded directly into R as doing so involves
+ logging into the site."
+
+#----Human Footprint----
+
+# make directory
+hf_dir = "data/GIS/humanFootprint"
+if (!dir.exists(hf_dir)) {
+  dir.create(hf_dir)
+}
+
+# Info:
+# https://sedac.ciesin.columbia.edu/data/set/wildareas-v3-2009-human-footprint
+
+# Download
+# https://sedac.ciesin.columbia.edu/downloads/data/wildareas-v3/wildareas-v3-2009-human-footprint/wildareas-v3-2009-human-footprint-geotiff.zip
+
+
+#----Human Density---- (2000, 05, 10, 15)
+
+# make directory
+hd_dir = "data/GIS/humanDensity"
+if (!dir.exists(hd_dir)) {
+  dir.create(hd_dir)
+}
+
+# Info:
+# https://sedac.ciesin.columbia.edu/data/set/gpw-v4-population-density-rev11
+
+# Download:
+# https://sedac.ciesin.columbia.edu/downloads/data/gpw-v4/gpw-v4-population-density-rev11/gpw-v4-population-density-rev11_2000_30_sec_tif.zip
+# https://sedac.ciesin.columbia.edu/downloads/data/gpw-v4/gpw-v4-population-density-rev11/gpw-v4-population-density-rev11_2005_30_sec_tif.zip
+# https://sedac.ciesin.columbia.edu/downloads/data/gpw-v4/gpw-v4-population-density-rev11/gpw-v4-population-density-rev11_2010_30_sec_tif.zip
+# https://sedac.ciesin.columbia.edu/downloads/data/gpw-v4/gpw-v4-population-density-rev11/gpw-v4-population-density-rev11_2015_30_sec_tif.zip
+
+
+
+# AUTOMATIC DOWNLOADS
+
+" The rest of the data can be downloaded automatically using 
+  the following code"
 
 
 #----Full BBox----
@@ -94,25 +139,42 @@ r_srtm = eval(parse(text = call4mosaic))
 srtm = crop(r_srtm, spdf)
 
 
-#----Landcover----
+#----MODIS Landcover----
 
 # get list of tiles required to cover this bcr
 tiles <- getTile(st_bbox(ext))
 tiles@tile
 
 # download tiles and combine into a single raster for each year
-tifs <- runGdal(product = "MCD12Q1", collection = "006", SDSstring = "01", 
-                tileH = tiles@tileH, tileV = tiles@tileV,
-                begin = "2016.01.01", end = "2017.12.31", 
-                outDirPath = "data/GIS", job = "modis") %>% 
+tifs_lc <- runGdal(product = "MCD12Q1", collection = "006", SDSstring = "01", 
+                   tileH = tiles@tileH, tileV = tiles@tileV,
+                   begin = "2001.01.01", end = "2017.12.31", 
+                   outDirPath = "data/GIS", job = "modis") %>% 
   pluck("MCD12Q1.006") %>% 
   unlist()
 
 # rename tifs to have more descriptive names
-new_names <- format(as.Date(names(tifs)), "%Y") %>% 
+new_names <- format(as.Date(names(tifs_lc)), "%Y") %>% 
   sprintf("modis_mcd12q1_umd_%s.tif", .) %>% 
-  file.path(dirname(tifs), .)
-file.rename(tifs, new_names)
+  file.path(dirname(tifs_lc), .)
+file.rename(tifs_lc, new_names)
+
+
+#----Canopy Cover----
+
+# download tiles and combine into a single raster for each year
+tifs_cc <- runGdal(product = "MOD44B", collection = "006", SDSstring = "01", 
+                   tileH = tiles@tileH, tileV = tiles@tileV,
+                   begin = "2000.04.01", end = "2017.12.31", 
+                   outDirPath = "data/GIS", job = "modis") %>% 
+  pluck("MOD44B.006") %>% 
+  unlist()
+
+# rename tifs to have more descriptive names
+new_names <- format(as.Date(names(tifs_cc)), "%Y") %>% 
+  sprintf("modis_mod44b_umd_%s.tif", .) %>% 
+  file.path(dirname(tifs_cc), .)
+file.rename(tifs_cc, new_names)
 
 
 #----Canopy Height----
@@ -151,44 +213,36 @@ climate = stack(worldclim, tmin, tmax, prec) %>%
   crop(., spdf)
 
 
-#----Human density----
+#----Roads----
 
 # make directory
-hd_dir = "data/GIS/humanDensity"
-if (!dir.exists(hd_dir)) {
-  dir.create(hd_dir)
+rd_dir = "data/GIS/roads"
+if (!dir.exists(rd_dir)) {
+  dir.create(rd_dir)
 }
 
-hd00 = "https://sedac.ciesin.columbia.edu/downloads/data/gpw-v4/gpw-v4-population-density-rev11/gpw-v4-population-density-rev11_2000_30_sec_tif.zip"
-hd05 = "https://sedac.ciesin.columbia.edu/downloads/data/gpw-v4/gpw-v4-population-density-rev11/gpw-v4-population-density-rev11_2005_30_sec_tif.zip"
-hd10 = "https://sedac.ciesin.columbia.edu/downloads/data/gpw-v4/gpw-v4-population-density-rev11/gpw-v4-population-density-rev11_2010_30_sec_tif.zip"
-hd15 = "https://sedac.ciesin.columbia.edu/downloads/data/gpw-v4/gpw-v4-population-density-rev11/gpw-v4-population-density-rev11_2015_30_sec_tif.zip"
+# download file from online for North America
+download.file("http://geoservice.pbl.nl/download/opendata/GRIP4/GRIP4_Region1_vector_shp.zip",
+              destfile = paste0(rd_dir, "/GRIP4_Region1_vector_shp.zip"))
+unzip(paste0(rd_dir, "/GRIP4_Region1_vector_shp.zip"), exdir = paste0(rd_dir, "/GRIP4_Region1_vector_shp"))
+
+# download file from online for Central & South America
+download.file("http://geoservice.pbl.nl/download/opendata/GRIP4/GRIP4_Region2_vector_shp.zip",
+              destfile = paste0(rd_dir, "/GRIP4_Region2_vector_shp.zip"))
+unzip(paste0(rd_dir, "/GRIP4_Region2_vector_shp.zip"), exdir = paste0(rd_dir, "/GRIP4_Region2_vector_shp"))
+
+# combine the shapefiles
+rd_na = shapefile(paste0(rd_dir, "/GRIP4_Region1_vector_shp/GRIP4_region1.shp"))
+rd_csa = shapefile(paste0(rd_dir, "/GRIP4_Region2_vector_shp/GRIP4_region2.shp"))
+
+ext <- extent(p)
+r <- raster(ext, res=50000)  
+r <- rasterize(p, r, field=1)
+plot(r)
 
 
-hd = vector("list", 4)
-for(i in hd){
-  download.file(i, destfile = "data/GIS/`human density`")
-}
+#----Output----
 
-
-#----Human footprint----
-
-# make directory
-hf_dir = "data/GIS/humanFootprint"
-if (!dir.exists(hf_dir)) {
-  dir.create(hf_dir)
-}
-
-# download file directly from online
-download.file(
-  "https://sedac.ciesin.columbia.edu/downloads/data/wildareas-v3/wildareas-v3-2009-human-footprint/wildareas-v3-2009-human-footprint-geotiff.zip",
-  destfile = paste0(hf_dir, "/wildareas-v3-2009-human-footprint-geotiff.zip"))
-
-unzip(zipfile = paste0(hf_dir, "/wildareas-v3-2009-human-footprint-geotiff.zip"),
-      exdir = "wildareas-v3-2009-human-footprint-geotiff")
-
-
-#----output----
 unlink(f_ne)
 write_sf(ne_land, f_ne, "ne_land")
 write_sf(ne_country_lines, f_ne, "ne_country_lines")
