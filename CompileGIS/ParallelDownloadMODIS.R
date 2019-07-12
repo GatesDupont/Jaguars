@@ -55,3 +55,5 @@ foreach(i = 1:6, .packages=c('MODIS', 'rgeos', 'purr', 'dplyr')) %dopar% {
     file.path(dirname(tifs_lc[[i]]), .)
   file.rename(tifs_lc[[i]], new_names[[i]])
 }
+stopCluster(cl)
+
