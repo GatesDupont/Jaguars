@@ -4,6 +4,7 @@ library(doParallel)
 library(dplyr)
 library(foreach)
 library(MODIS)
+library(purrr)
 library(raster)
 library(sp)
 library(SpaDES)
@@ -60,7 +61,7 @@ for(i in 1:6){
 }
 
 # parallelizing the MODIS data download
-foreach(i = 1:6, .packages=c('MODIS', 'rgeos', 'purr', 'dplyr')) %dopar% {
+foreach(i = 1:6, .packages=c('MODIS', 'rgeos', 'purrr', 'dplyr')) %dopar% {
   # download tiles and combine into a single raster for each year
   tifs_lc[[i]] <- runGdal(product = "MCD12Q1", collection = "006", SDSstring = "01", 
                      tileH = tiles.split[[i]]@tileH, tileV = tiles.split[[i]]@tileV,
