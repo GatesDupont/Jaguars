@@ -10,10 +10,11 @@ library(sp)
 library(SpaDES)
 library(sf)
 
-select = dplyr::select
+select = dplyr::select # resolve namespace conflict
 
 #----Extent----
-df = expand.grid(data.frame(lat = c(-60, 40), long = c(-125,-30)))
+df = expand.grid(data.frame(lat = c(49.153268, 34.872838), long = c(-84.078898,-67.402150))) # test
+# df = expand.grid(data.frame(lat = c(-60, 40), long = c(-125,-30))) # Jaguars
 
 # sp extent object
 spdf = df
@@ -76,4 +77,4 @@ foreach(i = 1:6, .packages=c('MODIS', 'rgeos', 'purrr', 'dplyr')) %dopar% {
     file.path(dirname(tifs_lc[[i]]), .)
   file.rename(tifs_lc[[i]], new_names[[i]])
 }
-stopCluster(cl) # ending parallels
+stopCluster(cl) # ending parallel
