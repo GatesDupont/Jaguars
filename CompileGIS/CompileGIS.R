@@ -85,6 +85,29 @@ if (!dir.exists(gpkg_dir)) {
 f_ne <- file.path(gpkg_dir, "gis-data.gpkg")
 
 
+#----Study area shapefile----
+
+# making file path for shapefile
+stdyshp_dir = "data/GIS/study_shp"
+if (!dir.exists(stdyshp_dir)) {
+  dir.create(stdyshp_dir)
+}
+
+# making function to set layer name in pipe
+names_inPipe = function(spolydf, newLayerName){
+  names(spolydf) = newLayerName
+  return(spolydf)
+}
+
+# get world polygons, crop to extent, dissolve, rename, save
+ne_countries(type = 'countries', scale = 'small') %>%
+  crop(spdf) %>%
+  aggregate() %>%
+  as('SpatialPolygonsDataFrame') %>%
+  names_inPipe(.,'studyArea') %>%
+  writeOGR(dsn=stdyshp_dir, layer='studyArea', driver='ESRI Shapefile')
+
+
 #----Political boundaries----
 
 # land border with lakes removed
