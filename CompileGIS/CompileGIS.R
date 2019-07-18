@@ -66,11 +66,17 @@ if (!dir.exists(hd_dir)) {
 
 #----Full BBox----
 
+# making a function for coordinates() w/in a pipe
+coordinates_iP = function(spdf){
+  coordinates(spdf) = ~long+lat
+  return(spdf)
+}
+
+# data.frame extent
 df = expand.grid(data.frame(lat = c(-60, 40), long = c(-125,-30)))
 
 # sp extent
-spdf = df
-coordinates(spdf) = ~long+lat
+spdf = coordinates_iP(df)
 
 # sf extent
 ext = st_as_sf(df, coords = c("long", "lat")) %>%
@@ -90,24 +96,40 @@ f_ne <- file.path(gpkg_dir, "gis-data.gpkg")
 #----Study area shapefile----
 
 # making file path for shapefile
-stdyshp_dir = "data/GIS/study_shp"
-if (!dir.exists(stdyshp_dir)) {
-  dir.create(stdyshp_dir)
+mr_dir = "data/GIS/masterRaster"
+if (!dir.exists(mr_dir)) {
+  dir.create(mr_dir)
 }
 
-# making function to set layer name in pipe
-names_inPipe = function(spolydf, newLayerName){
+# getting extent shapefile
+names_iP = function(spolydf, newLayerName){
   names(spolydf) = newLayerName
   return(spolydf)
 }
 
-# get world polygons, crop to extent, dissolve, rename, save
-ne_countries(type = 'countries', scale = 'small') %>%
+# rasterize a shapefile with a new resolution
+rasterize2 = function(shapefile, resolution) {
+  # Make empty raster
+  r = raster(ncol=500, nrow=500)
+  # set extent to shapefile
+  extent(r) = extent(shapefile)
+  # set desired resolution
+  res(r) = resolution
+  # assign random values to pixels
+  r[] = runif(n = ncell(r), min=0, max=1)
+  # rasterize the shapefile
+  r_shp = rasterize(shapefile, r)
+  return(r_shp)
+}
+
+# get world polys, crop, dissolve, rename, rasterize
+master = ne_countries(type = 'countries', scale = 'small') %>%
   crop(spdf) %>%
   aggregate() %>%
   as('SpatialPolygonsDataFrame') %>%
-  names_inPipe(.,'studyArea') %>%
-  writeOGR(dsn=stdyshp_dir, layer='studyArea', driver='ESRI Shapefile')
+  names_iP(.,'studyArea') %>%
+  #writeOGR(dsn=stdyshp_dir, layer='studyArea', driver='ESRI Shapefile') %>%
+  rasterize2(., 0.1)
 
 
 #----Political boundaries----
