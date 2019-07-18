@@ -3,9 +3,11 @@
 "Compiling GIS data for Jaguar Project"
 
 library(sf)
+library(sp)
 library(rnaturalearth)
 library(dplyr)
 library(raster)
+library(rgdal)
 library(MODIS)
 library(velox)
 library(viridis)
