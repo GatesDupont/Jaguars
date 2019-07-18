@@ -51,28 +51,24 @@ master = ne_countries(type = 'countries', scale = 'small') %>%
   rasterize2(., 0.1)
 
 
-#----Canopy Height----
-
-library(R.utils)
-
-# make directory
-ch_dir = "~/Desktop/canopyHeight"
-if (!dir.exists(ch_dir)) {
-  dir.create(ch_dir)
-}
-
-# download file from online
-download.file("https://landscape.jpl.nasa.gov/resources/Simard_Pinto_3DGlobalVeg_JGR.tif.gz",
-              destfile = paste0(ch_dir, "/Simard_Pinto_3DGlobalVeg_JGR.tif.gz"))
-
-# unzip the file
-gunzip(paste0(ch_dir, "/Simard_Pinto_3DGlobalVeg_JGR.tif.gz"))
-
-# read as raster and crop
-canopy_height = "~/Desktop/canopyHeight/Simard_Pinto_3DGlobalVeg_JGR.tif" %>%
-  raster()
-
-
 #----Raster coregistering----
-m.canopy_height = canopy_height %>%
+
+# canopy height
+m.canopy_height = "data/GIS/canopyHeight/Simard_Pinto_3DGlobalVeg_JGR.tif" %>%
+  raster() %>%
   projectRaster(from = ., to = master, method="bilinear")
+
+# human density
+m.human_density_15 = "data\\GIS\\humanDensity\\gpw-v4-population-density-rev11_2015_30_sec_tif\\gpw_v4_population_density_rev11_2015_30_sec.tif" %>%
+  raster() %>%
+  projectRaster(from = ., to = master, method="bilinear")
+
+# human footprint
+m.human_footprint = "data\\GIS\\humanFootprint\\wildareas-v3-2009-human-footprint-geotiff\\wildareas-v3-2009-human-footprint.tif" %>%
+  raster() %>%
+  projectRaster(from = ., to = master, method="bilinear")
+
+# elevation
+m.srtm = "data/GIS/srtm/srtm.tif" %>%
+  raster() %>%
+  projectRaster(from = ., to = master, method="ngb")
