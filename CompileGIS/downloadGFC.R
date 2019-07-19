@@ -14,9 +14,12 @@ for(i in 1:length(H)){
   for(j in 1:length(V)){
     print(paste("i =", i, "of", length(H)))
     print(paste("j =", j, "of", length(V)))
-    download.file(paste0("https://storage.googleapis.com/earthenginepartners-hansen/",
-                         "GFC-2018-v1.6/Hansen_GFC-2018-v1.6_treecover2000_", V[j], "_", H[i], ".tif"),
-                  destfile = paste0("~/Documents/Jaguar/data/GIS/gfc/Hansen_GFC-2018-v1.6_treecover2000_",
-                                    V[j], "_", H[i], ".tif"))
+    tryCatch(
+      download.file(paste0("https://storage.googleapis.com/earthenginepartners-hansen/",
+                           "GFC-2018-v1.6/Hansen_GFC-2018-v1.6_treecover2000_", V[j], "_", H[i], ".tif"),
+                    destfile = paste0("~/Documents/Jaguar/data/GIS/gfc/Hansen_GFC-2018-v1.6_treecover2000_",
+                                      V[j], "_", H[i], ".tif")),
+      error=function(e){}
+    )
   }
 }
