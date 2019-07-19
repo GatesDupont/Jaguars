@@ -13,6 +13,8 @@ library(velox)
 library(viridis)
 library(tidyverse)
 library(elevatr)
+library(wdpar)
+library(countrycode)
 
 # resolve namespace conflicts
 select = dplyr::select
@@ -39,7 +41,8 @@ if (!dir.exists(hf_dir)) {
 # https://sedac.ciesin.columbia.edu/downloads/data/wildareas-v3/wildareas-v3-2009-human-footprint/wildareas-v3-2009-human-footprint-geotiff.zip
 
 
-#----Human Density---- (2000, 05, 10, 15)
+#----Human Density---- 
+# (2000, 05, 10, 15)
 
 # make directory
 hd_dir = "data/GIS/humanDensity"
@@ -286,6 +289,31 @@ ext <- extent(p)
 r <- raster(ext, res=50000)  
 r <- rasterize(p, r, field=1)
 plot(r)
+
+
+#----Protected areas----
+
+# get iso3 country codes from a geographic extent
+master.iso3 = ne_countries(type = 'countries', scale = 'small') %>%
+  crop(spdf) %>%
+  slot("data") %>%
+  select(admin) %>%
+  unlist() %>%
+  as.character() %>%
+  countrycode('country.name', 'iso3c')
+
+if(is.null(wdpas)){
+  wdpas = vector("list", length(master.iso3))
+}
+
+for(i in 1:length(master.iso3)){
+  if(is.null(wdpas[[i]])){
+    print(paste("Begin download for", master.iso3[i]))
+    wdpas[[i]] = wdpa_fetch(master.iso3[i], wait = TRUE)
+    print(paste("Completed download for", master.iso3[i]))
+    print(paste0(100 * i/length(master.iso3), "% finished"))
+  }
+}
 
 
 #----Output----
