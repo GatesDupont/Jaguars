@@ -15,6 +15,7 @@ library(tidyverse)
 library(elevatr)
 library(wdpar)
 library(countrycode)
+library(gfcanalysis)
 
 # resolve namespace conflicts
 select = dplyr::select
@@ -124,6 +125,13 @@ rasterize2 = function(shapefile, resolution) {
   r_shp = rasterize(shapefile, r)
   return(r_shp)
 }
+
+# getting study area polygon
+master_poly = ne_countries(type = 'countries', scale = 'small') %>%
+  crop(spdf) %>%
+  aggregate() %>%
+  as('SpatialPolygonsDataFrame') %>%
+  names_iP(.,'studyArea')
 
 # get world polys, crop, dissolve, rename, rasterize
 master = ne_countries(type = 'countries', scale = 'small') %>%
@@ -314,6 +322,19 @@ for(i in 1:length(master.iso3)){
     print(paste0(100 * i/length(master.iso3), "% finished"))
   }
 }
+
+
+#----Global forest change----
+# and cover
+
+# Calculate the google server URLs for the tiles needed to cover the AOI
+tiles = calc_gfc_tiles(master_poly)
+
+# download tiles
+download_tiles(tiles, "~/Jaguar/data/GIS/gfc")
+
+# moasic and save tiles
+gfc_data = extract_gfc(master_poly, "~/Jaguar/data/GIS/gfc", filename='gfc.tif')
 
 
 #----Output----
