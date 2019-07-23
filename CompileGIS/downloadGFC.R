@@ -1,25 +1,38 @@
+library(sp)
+library(sf)
 library(dplyr)
+library(rnaturalearth)
+library(gfcanalysis)
+library(rgdal)
 
-#----Getting GFC tiles----
-H = seq(130, 40, -10) %>%
-  as.character() %>%
-  paste0("W")
 
-V = seq(40, 0, -10) %>%
-  as.character() %>%
-  paste0("N") %>%
-  c(paste0(as.character(seq(0, 50, 10)),"S"))
-
-for(i in 1:length(H)){
-  for(j in 1:length(V)){
-    print(paste("i =", i, "of", length(H)))
-    print(paste("j =", j, "of", length(V)))
-    tryCatch(
-      download.file(paste0("https://storage.googleapis.com/earthenginepartners-hansen/",
-                           "GFC-2018-v1.6/Hansen_GFC-2018-v1.6_treecover2000_", V[j], "_", H[i], ".tif"),
-                    destfile = paste0("~/Documents/Jaguar/data/GIS/gfc/Hansen_GFC-2018-v1.6_treecover2000_",
-                                      V[j], "_", H[i], ".tif")),
-      error=function(e){}
-    )
-  }
+# making a function for coordinates() w/in a pipe
+coordinates_iP = function(spdf){
+  coordinates(spdf) = ~long+lat
+  return(spdf)
 }
+
+# creating extent
+df = expand.grid(data.frame(lat = c(3, 10), long = c(-125,-75)))
+spdf = coordinates_iP(df)
+
+# setting a directory for download
+data_folder = "./Documents/Jaguar/data/GIS/gfc"
+
+# getting study area polygon
+aoi = ne_countries(type = 'countries', scale = 'small') %>%
+  crop(spdf) %>%
+  aggregate() %>%
+  as_Spatial()
+
+# Calculate the google server URLs for the tiles needed to cover the AOI
+tiles = calc_gfc_tiles(aoi)
+
+# Check to see if these tiles are already present locally, and download them if 
+# they are not.
+download_tiles(tiles, data_folder)
+
+# Extract the GFC data for this AOI from the downloaded GFC tiles, mosaicing 
+# multiple tiles as necessary (if needed to cover the AOI), and saving  the 
+# output data to a GeoTIFF (can also save in ENVI format, Erdas format, etc.).
+gfc_data = extract_gfc(aoi, data_folder, filename=file.path(data_folder, 'gfc_extract.tif'))
