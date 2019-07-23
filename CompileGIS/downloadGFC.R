@@ -4,6 +4,7 @@ library(dplyr)
 library(rnaturalearth)
 library(gfcanalysis)
 library(rgdal)
+library(raster)
 
 
 # making a function for coordinates() w/in a pipe
@@ -13,17 +14,18 @@ coordinates_iP = function(spdf){
 }
 
 # creating extent
-df = expand.grid(data.frame(lat = c(3, 10), long = c(-125,-75)))
+df = expand.grid(data.frame(lat = c(-60, 40), long = c(-125,-30)))
 spdf = coordinates_iP(df)
 
 # setting a directory for download
-data_folder = "./Documents/Jaguar/data/GIS/gfc"
+data_folder = "Jaguar/data/GIS/gfc"
 
 # getting study area polygon
-aoi = ne_countries(type = 'countries', scale = 'small') %>%
-  crop(spdf) %>%
-  aggregate() %>%
-  as_Spatial()
+aoi = ne_countries(type = 'countries', scale = 'small', returnclass = "sf") %>%
+  st_set_crs(4326) %>%
+  st_crop(spdf) %>%
+  as_Spatial() %>%
+  aggregate()
 
 # Calculate the google server URLs for the tiles needed to cover the AOI
 tiles = calc_gfc_tiles(aoi)
