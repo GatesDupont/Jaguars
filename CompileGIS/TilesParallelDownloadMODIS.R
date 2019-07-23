@@ -56,6 +56,7 @@ tifs <- runGdal(product = "MCD12Q1", collection = "006", SDSstring = "01",
                 outDirPath = "data/GIS/modis/tiles", job = "modis") %>% 
   pluck("MCD12Q1.006") %>% 
   unlist()
+# "Local structure is up-to-date. Using offline information!"
 
 # rename tifs to have more descriptive names
 new_names <- format(as.Date(names(tifs)), "%Y") %>% 
