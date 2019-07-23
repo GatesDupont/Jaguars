@@ -44,3 +44,21 @@ foreach(i = 1:42, .packages=c('MODIS', 'rgeos', 'purrr', 'dplyr')) %dopar% {
   file.rename(tifs, new_names)
 }
 stopCluster(cl)
+
+#---Re=run to mosaic tiles by year----
+
+# FIRST, COPY THE MODIS TILES FROM THEIR ORIGINAL ARC PATH
+# e.g.: C:\Users\dupont\AppData\Local\Temp\Rtmpu4ZXW2\MODIS_ARC\MODIS
+
+tifs <- runGdal(product = "MCD12Q1", collection = "006", SDSstring = "01", 
+                tileH = tilesH, tileV = tilesV, localArcPath = "data/GIS/modis/MCD12Q1.006",
+                begin = "2001.01.01", end = "2017.12.31", forceDownload = F,
+                outDirPath = "data/GIS/modis/tiles", job = "modis") %>% 
+  pluck("MCD12Q1.006") %>% 
+  unlist()
+
+# rename tifs to have more descriptive names
+new_names <- format(as.Date(names(tifs)), "%Y") %>% 
+  sprintf("modis_mcd12q1_umd_%s.tif", .) %>% 
+  file.path(dirname(tifs), .)
+file.rename(tifs, new_names)
