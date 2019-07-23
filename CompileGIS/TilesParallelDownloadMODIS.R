@@ -18,7 +18,6 @@ if (!dir.exists(Jaguar_dir)) {
 setwd(Jaguar_dir)
 
 #----Read in manually-selected tiles----
-# Could use getTiles() but I hard-coded out of annoyance! :)
 tiles = read.csv("data/GIS/modis/MODIS_tiles.csv")
 tilesH = tiles$H
 tilesV = tiles$V
