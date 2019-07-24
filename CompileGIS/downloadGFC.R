@@ -16,16 +16,17 @@ coordinates_iP = function(spdf){
 # creating extent
 df = expand.grid(data.frame(lat = c(-60, 40), long = c(-125,-30)))
 spdf = coordinates_iP(df)
+crs(spdf) = CRS("+init=epsg:4326")
+
+sfext = st_as_sf(df, coords = c("long", "lat")) %>%
+  st_set_crs(4326)
 
 # setting a directory for download
 data_folder = "Jaguar/data/GIS/gfc"
 
 # getting study area polygon
-aoi = ne_countries(type = 'countries', scale = 'small', returnclass = "sf") %>%
-  st_set_crs(4326) %>%
-  st_crop(spdf) %>%
-  as_Spatial() %>%
-  aggregate()
+aoi = ne_countries(type = 'countries', scale = 'small', returnclass = "sp") %>%
+  crop(spdf)
 
 # Calculate the google server URLs for the tiles needed to cover the AOI
 tiles = calc_gfc_tiles(aoi)
