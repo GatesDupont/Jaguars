@@ -14,7 +14,7 @@ coordinates_iP = function(spdf){
 }
 
 # creating extent
-df = expand.grid(data.frame(lat = c(-60, 40), long = c(-125,-30)))
+df = expand.grid(data.frame(lat = c(-60, 41), long = c(-125,-30))) # change from 41 to 41 to fix extent|tile overlap
 spdf = coordinates_iP(df)
 crs(spdf) = CRS("+init=epsg:4326")
 
@@ -22,7 +22,7 @@ sfext = st_as_sf(df, coords = c("long", "lat")) %>%
   st_set_crs(4326)
 
 # setting a directory for download
-data_folder = "Jaguar/data/GIS/gfc"
+data_folder = "Documents/Jaguar/data/GIS/gfc_test_spdfID"
 
 # getting study area polygon
 aoi = ne_countries(type = 'countries', scale = 'small', returnclass = "sp") %>%
