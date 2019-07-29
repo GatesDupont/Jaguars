@@ -117,10 +117,6 @@ vtab = table(vtrue, vmod)
 (vgood = (vtab[1,1] + vtab[2,2])/sum(vtab))
 
 
-
-
-
-
 #----XGBoost in MLR----
 newdata.xgb = as.data.frame(wc)
 
@@ -139,14 +135,23 @@ xgb_learner <- makeLearner(
   )
 )
 
-
 # Create a model
 xgb_model = train(xgb_learner, task = trainTask)
 
+# predict
 result = stats::predict(xgb_model, newdata = newdata.xgb)
 
-xgg.pred.raster = worldclim$bio1
-values(xgg.pred.raster) = result$data
+# make prediction to raster
+xgb.pred.raster = worldclim$bio1
+values(xgb.pred.raster) = result$data$response
+values(xgb.pred.raster)[is.na(values(worldclim$bio1))] = NA
 
-
-
+#-----Plotting the model----
+image(xgb.pred.raster, main = "True vs Modeled",
+      col = c("gray90", "red"),
+      xaxs = "i", xaxt = 'n', yaxt = 'n', ylab = "", xlab = "",
+      ann = T, asp = 1, axes = FALSE)
+image(pa$pa.raster, main = "True vs Modeled",
+      col = "#00A600FF", zlim = c(1,2), add=T,
+      xaxs = "i", xaxt = 'n', yaxt = 'n', ylab = "", xlab = "",
+      ann = T, asp = 1, axes = FALSE)
