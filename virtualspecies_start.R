@@ -6,15 +6,25 @@ library(randomForest)
 library(dplyr)
 library(purrr)
 library(mlr)
-predict = raster::predict
+library(sf)
+predict = stats::predict
+select = dplyr::select
+
+# making a function for coordinates() w/in a pipe
+coordinates_iP = function(df, crs_in){
+  coordinates(df) = ~x+y
+  sp::proj4string(df) = crs_in
+  return(df)
+}
 
 #----Environmental covariate data----
-wc = getData("worldclim", var = "bio", res = 10) %>%
+worldclim = getData("worldclim", var = "bio", res = 10) %>%
   .[[c("bio1", "bio12")]]
 
-wc = cbind(coordinates(wc), values(wc)) %>%
-  SpatialPointsDataFrame(.[,c("x","y")], proj4string = crs(wc))
-
+wc = cbind(coordinates(worldclim), values(worldclim)) %>%
+  as.data.frame() %>%
+  coordinates_iP(df = ., crs_in = CRS(st_crs(4326)$proj4string))
+  
 
 #----Response functions----
 params = formatFunctions(
@@ -25,7 +35,7 @@ params = formatFunctions(
 
 #----Virtual species----
 vsp = generateSpFromFun(
-  raster.stack = wc,
+  raster.stack = worldclim,
   parameters = params,
   plot = TRUE
 )
@@ -51,12 +61,15 @@ pa.pts.sp = pa.pts %>%
   SpatialPoints(., proj4string = crs(wc))
 
 #----Extract enviornmental covariates----
-lc = raster::extract(wc, pa.pts.sp, sp = T) %>%
-  as.data.frame()
+lc = raster::extract(worldclim, pa.pts.sp@coords, sp = T) %>%
+  as.data.frame() %>%
+  mutate(x = pa.pts.sp@coords[,1]) %>%
+  mutate(y = pa.pts.sp@coords[,2] ) %>% 
+  select(3, 4, 1, 2)
 
 
 #----Assosciate covariates----
-df = cbind(lc[,3:4], occupied = as.factor(pa.pts$sample.points[,c(4)]), lc[,1:2])
+df = cbind(lc[,c(1,2)], occupied = as.factor(pa.pts$sample.points[,c(4)]), lc[,c(3,4)])
 
 
 #----Split train/test----
@@ -70,13 +83,17 @@ test = df[df$data == "test", names(df) != "data"]
 
 
 #----Running the model----
-sdm = randomForest(as.numeric(occupied)~bio1+bio12+x+y, train)
+sdm = randomForest(occupied~bio1+bio12+x+y, train)
 evaluate(test[test$occupied==1,], test[test$occupied==0,], sdm)
 
 
 #----Predicting from raster stack----
-sdm_pred = predict(wc, sdm)
+pred.df = predict(sdm, wc) %>% # stats
+  cbind(predO = ., as.data.frame(wc))
 
+pred.raster = worldclim$bio1
+values(pred.raster) = as.numeric(levels(pred.df[,1]))[pred.df[,1]] %>%
+  as.logical()
 
 #----Plotting true distribution and modeled----
 sdm.plot = function(raster, title){
@@ -86,18 +103,29 @@ sdm.plot = function(raster, title){
         ann = T, asp = 1, axes = FALSE)
 }
 
-par(mfrow=c(1,2))
-sdm.plot(vsp$suitab.raster, title = "True")
-sdm.plot(sdm_pred, title = "Modeled")
+par(mfrow=c(2,1))
+#sdm.plot(vsp$suitab.raster, title = "True")
+sdm.plot(pa$pa.raster, title = "True")
+sdm.plot(pred.raster, title = "Modeled")
 par(mfrow=c(1,1))
+
+#----compare similarlities----
+vtrue = as.numeric(values(pa$pa.raster))
+vmod = as.numeric(values(pred.raster))
+
+vtab = table(vtrue, vmod)
+(vgood = (vtab[1,1] + vtab[2,2])/sum(vtab))
+
+
+
+
 
 
 #----XGBoost in MLR----
-trainTask <- makeClassifTask(data = train, target = "occupied", positive = 1)
-testTask <- makeClassifTask(data = test, target = "occupied")
+newdata.xgb = as.data.frame(wc)
 
-wcTask = makeClassifTask(data = as.data.frame(values(wc)), target="occupied")
-
+trainTask = makeClassifTask(data = train, target = "occupied", positive = 1)
+testTask = makeClassifTask(data = test, target = "occupied")
 
 set.seed(1)
 # Create an xgboost learner that is classification-based and outputs labels (as opposed to probabilities)
@@ -111,19 +139,14 @@ xgb_learner <- makeLearner(
   )
 )
 
-binom_learner  = makeLearner(
-  cl = "classif.binomial",
-  link = "logit",
-  predict.type = "prob",
-  fix.factors.prediction = TRUE
-)
 
 # Create a model
-xgb_model <- train(xgb_learner, task = trainTask)
-binom_model = train(binom_learner, task = trainTask)
+xgb_model = train(xgb_learner, task = trainTask)
 
+result = stats::predict(xgb_model, newdata = newdata.xgb)
 
-result <- predict(binom_model, testTask)
+xgg.pred.raster = worldclim$bio1
+values(xgg.pred.raster) = result$data
 
 
 
